@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Project Management - Task Dashboard</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #f4f6fb;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #ffffff;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .card-header {
+      font-weight: bold;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .form-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 160px;
+    }
+    label {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 4px;
+    }
+    input[type="text"], select, textarea {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #3b82f6;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-danger {
+      background: #ef4444;
+      color: #fff;
+    }
+    .btn-sm {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .actions {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: #f3f4f6;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .badge {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      display: inline-block;
+    }
+    .badge-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .badge-inprogress {
+      background: #dbebff;
+      color: #1d4ed8;
+    }
+    .badge-completed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .status-filter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    @media (max-width: 700px) {
+      .form-row {
+        flex-direction: column;
+      }
+      table {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Project Management - Task Dashboard</h1>
+
+    <!-- Task Form -->
+    <div class="card">
+      <div class="card-header">
+        <span id="form-title">Create New Task</span>
+        <button id="reset-btn" class="btn btn-secondary btn-sm" type="button">Reset</button>
+      </div>
+      <form id="task-form">
+        <input type="hidden" id="task-id" />
+        <div class="form-row">
+          <div class="form-group">
+            <label for="title">Task Title</label>
+            <input type="text" id="title" placeholder="e.g. Design login screen" required />
+          </div>
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" required>
+              <option value="pending">Pending</option>
+              <option value="inprogress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1 1 100%;">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder="Add details about this task..."></textarea>
+          </div>
+        </div>
+        <button type="submit" id="submit-btn" class="btn btn-primary">Create Task</button>
+      </form>
+    </div>
+
+    <!-- Task List -->
+    <div class="card">
+      <div class="card-header">
+        <span>All Tasks</span>
+        <div class="status-filter">
+          <span>Filter:</span>
+          <select id="filter-status">
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="inprogress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <table id="task-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Task Title</th>
+            <th>Status</th>
+            <th>Description</th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="task-body">
+          <!-- rows injected by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // In-memory data store
+    let tasks = [];
+    let nextId = 1;
+
+    const taskForm = document.getElementById("task-form");
+    const taskIdInput = document.getElementById("task-id");
+    const titleInput = document.getElementById("title");
+    const statusInput = document.getElementById("status");
+    const descInput = document.getElementById("description");
+    const submitBtn = document.getElementById("submit-btn");
+    const formTitle = document.getElementById("form-title");
+    const resetBtn = document.getElementById("reset-btn");
+    const filterStatus = document.getElementById("filter-status");
+    const taskBody = document.getElementById("task-body");
+
+    function renderTasks() {
+      const filter = filterStatus.value;
+      taskBody.innerHTML = "";
+
+      const filteredTasks = tasks.filter(t => {
+        if (filter === "all") return true;
+        return t.status === filter;
+      });
+
+      filteredTasks.forEach((task, index) => {
+        const tr = document.createElement("tr");
+
+        const tdIndex = document.createElement("td");
+        tdIndex.textContent = index + 1;
+
+        const tdTitle = document.createElement("td");
+        tdTitle.textContent = task.title;
+
+        const tdStatus = document.createElement("td");
+        const span = document.createElement("span");
+        span.classList.add("badge");
+        if (task.status === "pending") span.classList.add("badge-pending");
+        if (task.status === "inprogress") span.classList.add("badge-inprogress");
+        if (task.status === "completed") span.classList.add("badge-completed");
+        span.textContent = task.status === "inprogress" ? "In Progress" :
+                           task.status.charAt(0).toUpperCase() + task.status.slice(1);
+        tdStatus.appendChild(span);
+
+        const tdDesc = document.createElement("td");
+        tdDesc.textContent = task.description || "-";
+
+        const tdActions = document.createElement("td");
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "actions";
+
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-secondary btn-sm";
+        editBtn.textContent = "Edit";
+        editBtn.onclick = () => editTask(task.id);
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "btn btn-danger btn-sm";
+        delBtn.textContent = "Delete";
+        delBtn.onclick = () => deleteTask(task.id);
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(delBtn);
+        tdActions.appendChild(actionsDiv);
+
+        tr.appendChild(tdIndex);
+        tr.appendChild(tdTitle);
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdDesc);
+        tr.appendChild(tdActions);
+
+        taskBody.appendChild(tr);
+      });
+
+      if (filteredTasks.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.style.textAlign = "center";
+        td.textContent = "No tasks to display.";
+        tr.appendChild(td);
+        taskBody.appendChild(tr);
+      }
+    }
+
+    function resetForm() {
+      taskIdInput.value = "";
+      titleInput.value = "";
+      statusInput.value = "pending";
+      descInput.value = "";
+      submitBtn.textContent = "Create Task";
+      formTitle.textContent = "Create New Task";
+    }
+
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      taskIdInput.value = task.id;
+      titleInput.value = task.title;
+      statusInput.value = task.status;
+      descInput.value = task.description;
+
+      submitBtn.textContent = "Update Task";
+      formTitle.textContent = "Update Task";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function deleteTask(id) {
+      if (!confirm("Are you sure you want to delete this task?")) return;
+      tasks = tasks.filter(t => t.id !== id);
+      renderTasks();
+    }
+
+    taskForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const id = taskIdInput.value;
+      const title = titleInput.value.trim();
+      const status = statusInput.value;
+      const description = descInput.value.trim();
+
+      if (!title) return;
+
+      if (id) {
+        // Update
+        const index = tasks.findIndex(t => t.id === Number(id));
+        if (index !== -1) {
+          tasks[index].title = title;
+          tasks[index].status = status;
+          tasks[index].description = description;
+        }
+      } else {
+        // Create
+        const newTask = {
+          id: nextId++,
+          title,
+          status,
+          description
+        };
+        tasks.push(newTask);
+      }
+
+      resetForm();
+      renderTasks();
+    });
+
+    filterStatus.addEventListener("change", renderTasks);
+    resetBtn.addEventListener("click", () => {
+      resetForm();
+    });
+
+    // Seed with sample data for first view
+    tasks = [
+      { id: nextId++, title: "Set up project repository", status: "completed", description: "Initialize Git and basic folder structure." },
+      { id: nextId++, title: "Design dashboard UI", status: "inprogress", description: "Create layout for CRUD task management." },
+      { id: nextId++, title: "Implement CRUD APIs", status: "pending", description: "Connect frontend to backend once endpoints are ready." }
+    ];
+    renderTasks();
+  </script>
+</body>
+</html>
