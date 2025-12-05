@@ -17,17 +17,3 @@ Open `index.html` directly in your browser, or use a simple static server.
 python -m http.server 5500
 # Then open http://localhost:5500/index.html
 ```
-
-## Contributing
-- Make changes locally
-- Commit with a clear message
-- Push to `main`
-
-```powershell
-git add -A
-git commit -m "Update: refine index page"
-git push
-```
-
-## License
-Educational use for lab exercises.
